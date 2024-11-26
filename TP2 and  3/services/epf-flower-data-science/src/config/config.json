@@ -1,0 +1,18 @@
+{
+    "iris": {
+        "name": "Iris Species",
+        "url": "https://www.kaggle.com/datasets/uciml/iris"
+    },
+    "1": {
+        "name": "string",
+        "url": "string"
+    },
+    "dataset2": {
+        "name": "dataset2",
+        "url": "https://www.kaggle.com/datasets/rishabhrajsharma/cityride-dataset-rides-data-drivers-data"
+    },
+    "Air France Reviews Dataset": {
+        "name": "Air France Reviews Dataset",
+        "url": "https://www.kaggle.com/datasets/saharnazyaghoobpoor/air-france-reviews-dataset"
+    }
+}
