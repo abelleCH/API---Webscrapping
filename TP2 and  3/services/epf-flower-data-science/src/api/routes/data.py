@@ -32,6 +32,36 @@ def save_config(config):
     with open(CONFIG_FILE_PATH, "w") as file:
         json.dump(config, file, indent=4)    
 
+@router.get("/data/list", name="List All Datasets")
+def list_datasets():
+    """
+    Liste tous les datasets présents dans le fichier de configuration avec leurs noms et URLs.
+    """
+    try:
+        # Charger le fichier de configuration
+        config = load_config()
+
+        # Vérifier si le fichier est vide
+        if not config:
+            return {"message": "Aucun dataset trouvé dans le fichier de configuration."}
+
+        # Extraire les datasets sous forme de liste
+        datasets = [{"name": key, "url": value["url"]} for key, value in config.items()]
+        
+        # Retourner les datasets
+        return {"message": "Datasets listés avec succès.", "datasets": datasets}
+    
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=500,
+            detail="Le fichier de configuration est manquant."
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Une erreur est survenue : {str(e)}"
+        )
+
 
 @router.get("/dataset", name="Get dataset info", response_model=MessageResponse)
 def get_dataset(dataset_name: str) -> MessageResponse:
@@ -101,3 +131,42 @@ async def add_dataset(name: str, url: str):
             status_code=500,
             detail=f"Une erreur est survenue : {str(e)}"
         )
+    
+@router.put("/update", name="Update dataset", response_model=MessageResponse)
+async def update_dataset(name: str, new_url: str):
+    """
+    Modifie l'URL d'un dataset existant dans le fichier de configuration.
+    - `name`: Le nom du dataset à modifier.
+    - `new_url`: La nouvelle URL du dataset.
+    """
+    try:
+        # Charger la configuration existante
+        config = load_config()
+
+        # Vérifier si le dataset existe
+        if name not in config:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Le dataset '{name}' n'existe pas dans le fichier de configuration."
+            )
+
+        # Modifier les informations du dataset
+        config[name]["url"] = new_url
+
+        # Sauvegarder les modifications dans le fichier
+        save_config(config)
+
+        return {"message": f"Le dataset '{name}' a été mis à jour avec succès."}
+
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=500,
+            detail="Le fichier de configuration est manquant."
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Une erreur est survenue : {str(e)}"
+        )
+    
+    
