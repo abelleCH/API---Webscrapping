@@ -3,6 +3,7 @@ from src.schemas.message import MessageResponse
 from pydantic import BaseModel
 import json
 import os
+import pandas as pd
 
 router = APIRouter()
 
@@ -32,7 +33,7 @@ def save_config(config):
     with open(CONFIG_FILE_PATH, "w") as file:
         json.dump(config, file, indent=4)    
 
-@router.get("/data/list", name="List All Datasets")
+@router.get("/list", name="List All Datasets")
 def list_datasets():
     """
     Liste tous les datasets présents dans le fichier de configuration avec leurs noms et URLs.
@@ -63,7 +64,7 @@ def list_datasets():
         )
 
 
-@router.get("/dataset", name="Get dataset info", response_model=MessageResponse)
+@router.get("/info", name="Get dataset info", response_model=MessageResponse)
 def get_dataset(dataset_name: str) -> MessageResponse:
     """
     Récupère les informations d'un dataset à partir du fichier de configuration.
@@ -93,7 +94,7 @@ def get_dataset(dataset_name: str) -> MessageResponse:
         )
 
 @router.post("/add", name="Add dataset", response_model=MessageResponse)
-async def add_dataset(name: str, url: str):
+def add_dataset(name: str, url: str):
     """
     Ajoute un dataset au fichier de configuration en utilisant un nom et une URL spécifiés dans l'URL.
     - `name`: Le nom unique du dataset.
@@ -133,7 +134,7 @@ async def add_dataset(name: str, url: str):
         )
     
 @router.put("/update", name="Update dataset", response_model=MessageResponse)
-async def update_dataset(name: str, new_url: str):
+def update_dataset(name: str, new_url: str):
     """
     Modifie l'URL d'un dataset existant dans le fichier de configuration.
     - `name`: Le nom du dataset à modifier.
@@ -168,5 +169,31 @@ async def update_dataset(name: str, new_url: str):
             status_code=500,
             detail=f"Une erreur est survenue : {str(e)}"
         )
-    
-    
+
+IRIS_DATASET_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+
+# Step 7: Endpoint pour charger le dataset Iris
+@router.get("/load", name="Load Iris Dataset")
+def load_iris_dataset():
+    """
+    Charge le dataset Iris à partir de l'URL et le retourne sous forme de JSON.
+    """
+    try:
+        # Télécharger le dataset Iris (par exemple depuis UCI ou un fichier local)
+        # Définir les colonnes en fonction du format Iris
+        column_names = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width', 'species']
+        
+        # Lire le fichier CSV directement depuis l'URL ou depuis un fichier local
+        iris_df = pd.read_csv(IRIS_DATASET_URL, header=None, names=column_names)
+
+        # Convertir le DataFrame en JSON
+        iris_json = iris_df.to_json(orient="records")
+
+        # Retourner le JSON du dataset Iris
+        return {"message": "Iris dataset loaded successfully.", "data": json.loads(iris_json)}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Une erreur est survenue lors du chargement du dataset Iris : {str(e)}"
+        )
