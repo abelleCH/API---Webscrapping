@@ -186,8 +186,6 @@ def update_dataset(name: str, new_url: str):
             detail=f"Une erreur est survenue : {str(e)}"
         )
 
-
-
 @router.get("/load", name="Load Dataset")
 def load_dataset_from_url(url: str = Query(..., description="URL of the dataset to load")):
     """
@@ -208,9 +206,6 @@ def load_dataset_from_url(url: str = Query(..., description="URL of the dataset 
             status_code=500,
             detail=f"Une erreur est survenue lors du chargement du dataset depuis l'URL : {str(e)}"
         )
-
-
-
 
 @router.post("/PST", name="Process, split and train dataset")
 def process_dataset():
