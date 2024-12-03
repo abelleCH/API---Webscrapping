@@ -1,20 +1,23 @@
 from fastapi import APIRouter, HTTPException
 from src.schemas.message import MessageResponse
 from pydantic import BaseModel
+from fastapi import Query
 import json
 import os
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+import src.services.load as load
+import src.services.cleaning as cleaning
+import src.services.data as PST
 
 router = APIRouter()
+
+MODEL_PARAMS_FILE_PATH = "src/config/model_parameters.json"
+CONFIG_FILE_PATH = "src/config/config.json"
+IRIS_DATASET_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
 
 class Dataset(BaseModel):
     name: str
     url: str
-
-# Chemin vers le fichier de configuration
-CONFIG_FILE_PATH = "src/config/config.json"
 
 # Charger le fichier de configuration
 def load_config():
@@ -34,6 +37,17 @@ def save_config(config):
     """
     with open(CONFIG_FILE_PATH, "w") as file:
         json.dump(config, file, indent=4)    
+
+# Fonction pour charger les paramètres du modèle depuis le fichier JSON
+def load_model_parameters():
+    try:
+        with open(MODEL_PARAMS_FILE_PATH, "r") as file:
+            return json.load(file)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while loading model parameters: {str(e)}"
+        )
 
 @router.get("/list", name="List All Datasets")
 def list_datasets():
@@ -172,114 +186,46 @@ def update_dataset(name: str, new_url: str):
             detail=f"Une erreur est survenue : {str(e)}"
         )
 
-IRIS_DATASET_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
 
-# Step 7: Endpoint pour charger le dataset Iris
-@router.get("/load", name="Load Iris Dataset")
-def load_iris_dataset():
+
+@router.get("/load", name="Load Dataset")
+def load_dataset_from_url(url: str = Query(..., description="URL of the dataset to load")):
     """
-    Charge le dataset Iris à partir de l'URL et le retourne sous forme de JSON.
+    Charge un dataset à partir de l'URL fournie et le retourne sous forme de JSON.
     """
     try:
-        # Télécharger le dataset Iris (par exemple depuis UCI ou un fichier local)
-        # Définir les colonnes en fonction du format Iris
-        column_names = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width', 'species']
-        
-        # Lire le fichier CSV directement depuis l'URL ou depuis un fichier local
-        iris_df = pd.read_csv(IRIS_DATASET_URL, header=None, names=column_names)
+        # Lire le fichier CSV directement depuis l'URL fournie
+        dataset_df = pd.read_csv(url, header=None)
 
         # Convertir le DataFrame en JSON
-        iris_json = iris_df.to_json(orient="records")
+        dataset_json = dataset_df.to_json(orient="records")
 
-        # Retourner le JSON du dataset Iris
-        return {"message": "Iris dataset loaded successfully.", "data": json.loads(iris_json)}
+        # Retourner le JSON du dataset
+        return {"message": "Dataset loaded successfully.", "data": json.loads(dataset_json)}
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Une erreur est survenue lors du chargement du dataset Iris : {str(e)}"
+            detail=f"Une erreur est survenue lors du chargement du dataset depuis l'URL : {str(e)}"
         )
 
 
-@router.post("/process", name="Process dataset")
+
+
+@router.post("/PST", name="Process, split and train dataset")
 def process_dataset():
-    """
-    Perform necessary preprocessing on the dataset before it can be used for model training.
-    This may include handling missing values, encoding categorical variables, normalizing data, etc.
-    """
-    try:
-        # Load the Iris dataset
-        column_names = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width', 'species']
-        iris_df = pd.read_csv(IRIS_DATASET_URL, header=None, names=column_names)
+    try: 
 
-        # 1. Handle missing values (if any, drop them in this case)
-        iris_df = iris_df.dropna()
-
-        # 2. Encode categorical variables (the 'species' column)
-        iris_df['species'] = iris_df['species'].astype('category').cat.codes
-
-        # 3. Normalize the numeric columns
-        scaler = StandardScaler()
-        numeric_columns = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
-        iris_df[numeric_columns] = scaler.fit_transform(iris_df[numeric_columns])
-
-        # Return the processed DataFrame as a JSON object for verification
-        iris_json = iris_df.to_json(orient="records")
-        return {"message": "Dataset processed successfully.", "data": json.loads(iris_json)}
+        dataset = load.load_dataset_from_url(IRIS_DATASET_URL)
+        data = cleaning.process_dataset(dataset)
+        X_train, y_train, X_test, y_test = PST.split_dataset(data)
+        PST.train_model(X_train,y_train)
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred while processing the dataset: {str(e)}"
-        )
+            detail=f"Une erreur est survenue {str(e)}"
+        )    
 
 
-# Step 9: Endpoint to split the dataset into training and testing sets
-@router.post("/split", name="Split dataset into train and test")
-def split_dataset():
-    """
-    Split the Iris dataset into training and testing sets and return both as JSON.
-    """
-    try:
-        # Load the Iris dataset
-        column_names = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width', 'species']
-        iris_df = pd.read_csv(IRIS_DATASET_URL, header=None, names=column_names)
 
-        # Process the dataset: handling missing values, encoding categorical data, and normalizing
-        iris_df = iris_df.dropna()
-        iris_df['species'] = iris_df['species'].astype('category').cat.codes
-        scaler = StandardScaler()
-        numeric_columns = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
-        iris_df[numeric_columns] = scaler.fit_transform(iris_df[numeric_columns])
-
-        # Split the dataset into features (X) and target (y)
-        X = iris_df[numeric_columns]
-        y = iris_df['species']
-
-        # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Convert the split datasets to JSON format
-        X_train_json = X_train.to_json(orient="split")
-        X_test_json = X_test.to_json(orient="split")
-        y_train_json = y_train.to_json(orient="split")
-        y_test_json = y_test.to_json(orient="split")
-
-        # Return the split datasets as JSON
-        return {
-            "message": "Dataset split into train and test sets successfully.",
-            "train": {
-                "X": json.loads(X_train_json),
-                "y": json.loads(y_train_json)
-            },
-            "test": {
-                "X": json.loads(X_test_json),
-                "y": json.loads(y_test_json)
-            }
-        }
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred while splitting the dataset: {str(e)}"
-        )
