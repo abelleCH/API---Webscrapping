@@ -1,6 +1,6 @@
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
-import json
+from io import StringIO
 
 def process_dataset(dataset_json: str) -> dict:
     """
@@ -15,7 +15,7 @@ def process_dataset(dataset_json: str) -> dict:
     """
     try:
         # Convertir le JSON en DataFrame
-        dataset = pd.read_json(dataset_json)
+        dataset = pd.read_json(StringIO(dataset_json))
 
         # Renommer les colonnes (si nécessaire)
         column_names = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width', 'species']

@@ -218,7 +218,7 @@ def process_dataset():
 
         dataset = load.load_dataset_from_url(IRIS_DATASET_URL)
         data = cleaning.process_dataset(dataset)
-        X_train, y_train, X_test, y_test = PST.split_dataset(data)
+        X_train, y_train = PST.split_dataset(data)
         PST.train_model(X_train,y_train)
 
     except Exception as e:
