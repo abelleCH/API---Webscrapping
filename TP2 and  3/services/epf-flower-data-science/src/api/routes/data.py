@@ -3,6 +3,7 @@ from src.schemas.message import MessageResponse
 from pydantic import BaseModel
 from fastapi import Query
 import json
+import joblib
 import os
 import pandas as pd
 import src.services.load as load
@@ -14,6 +15,7 @@ router = APIRouter()
 MODEL_PARAMS_FILE_PATH = "src/config/model_parameters.json"
 CONFIG_FILE_PATH = "src/config/config.json"
 IRIS_DATASET_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+MODEL_PATH = "src/models/random_forest_model.pkl"
 
 class Dataset(BaseModel):
     name: str
@@ -215,6 +217,7 @@ def process_dataset():
         data = cleaning.process_dataset(dataset)
         X_train, y_train = PST.split_dataset(data)
         PST.train_model(X_train,y_train)
+        return "PST done"
 
     except Exception as e:
         raise HTTPException(
@@ -223,4 +226,42 @@ def process_dataset():
         )    
 
 
+class PredictionRequest(BaseModel):
+    features: list  # List of feature values (depending on your dataset's features)
+
+# Load the trained model (assuming it's a scikit-learn model)
+def load_trained_model():
+    try:
+        model = joblib.load(MODEL_PATH)  # Load the model from the specified path
+        return model
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while loading the trained model: {str(e)}"
+        )
+
+# Endpoint to make predictions
+@router.post("/predict", name="Predict with Trained Model")
+def make_prediction(request: PredictionRequest):
+    """
+    Makes a prediction using the trained model based on the provided features.
+    - `features`: List of feature values for prediction.
+    """
+    try:
+        model = load_trained_model()
+
+        input_data = pd.DataFrame([request.features])  # Convert the list of features into a DataFrame
+
+        # Make prediction using the model
+        prediction = model.predict(input_data)
+        print(prediction)
+
+        # Return the prediction as JSON
+        return {"message": "Prediction successful", "prediction": prediction.tolist()}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during prediction: {str(e)}"
+        )
 
