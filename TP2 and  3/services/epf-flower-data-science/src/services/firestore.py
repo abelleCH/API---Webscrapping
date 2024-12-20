@@ -53,10 +53,8 @@ def update_parameters(new_params: dict):
         else:
             current_params = {}
 
-        # Update parameters
         current_params.update(new_params)
 
-        # Save the updated parameters back to Firestore
         doc_ref.set({"params": current_params}, merge=True)
 
         return {"message": "Parameters updated successfully.", "params": current_params}
@@ -84,7 +82,6 @@ def add_parameters(params: dict):
         db = firestore.Client()
         doc_ref = db.collection("parameters").document("parameters")
 
-        # Retrieve existing parameters
         doc = doc_ref.get()
         if doc.exists:
             current_params = doc.to_dict()
@@ -96,11 +93,9 @@ def add_parameters(params: dict):
             if key in current_params:
                 response[key] = f"Parameter '{key}' already exists. Please update it."
             else:
-                # Add new parameter if not exists
                 current_params[key] = value
                 response[key] = f"Parameter '{key}' added successfully."
 
-        # Save the parameters to Firestore
         doc_ref.set(current_params, merge=True)
 
         return {"message": "Parameters processed.", "response": response}
