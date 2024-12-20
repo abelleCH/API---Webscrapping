@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from src.schemas.message import MessageResponse
 from pydantic import BaseModel
+from typing import Optional
 from fastapi import Query
 import json
 import joblib
@@ -28,6 +29,10 @@ MODEL_PATH = "src/models/random_forest_model.pkl"
 class Dataset(BaseModel):
     name: str
     url: str
+
+class ParametersRequest(BaseModel):
+    params: dict
+
 
 # Charger le fichier de configuration
 def load_config():
@@ -197,11 +202,33 @@ def update_dataset(name: str, new_url: str):
         )
 
 @router.get("/load", name="Load Dataset")
-def load_dataset_from_url(url: str = Query(..., description="URL of the dataset to load")):
+def load_dataset_from_url(url: Optional[str] = Query(None, description="URL of the dataset to load"),
+                          dataset_name: Optional[str] = Query(None, description="Name of the dataset to load")):
     """
     Charge un dataset à partir de l'URL fournie et le retourne sous forme de JSON.
     """
     try:
+        # Charger la configuration des datasets et leurs URLs
+        config = load_config()
+
+        # Si un nom de dataset est fourni, récupérer l'URL associée
+        if dataset_name:
+            dataset_info = config.get(dataset_name)
+            if dataset_info:
+                url = dataset_info["url"]
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Dataset '{dataset_name}' not found in configuration."
+                )
+
+        # Vérifier si une URL est présente
+        if not url:
+            raise HTTPException(
+                status_code=400,
+                detail="Either 'url' or 'dataset_name' must be provided."
+            )
+
         # Lire le fichier CSV directement depuis l'URL fournie
         dataset_df = pd.read_csv(url, header=None)
 
@@ -214,8 +241,9 @@ def load_dataset_from_url(url: str = Query(..., description="URL of the dataset 
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Une erreur est survenue lors du chargement du dataset depuis l'URL : {str(e)}"
+            detail=f"An error occurred while loading the dataset from the URL: {str(e)}"
         )
+
 
 @router.post("/PST", name="Process, split and train dataset")
 def process_dataset():
@@ -262,5 +290,23 @@ def make_prediction(request: PredictionRequest):
             detail=f"An error occurred during prediction: {str(e)}"
         )
 
+@router.get("/collection", name="See firestore collection parameters")
+def get_parameters_collection():
+    """
+    Create a Firestore collection for model parameters.
+    """
+    return get_parameters()
 
+@router.put("/updateC", name="Update parameters in Firestore")
+def update_parameters_endpoint(request: ParametersRequest):
+    """
+    Met à jour les paramètres dans Firestore avec les paramètres envoyés dans la requête.
+    """
+    return update_parameters(request.params)
 
+@router.post("/addC", name="Add new parameters to Firestore")
+def add_parameters_endpoint(request: ParametersRequest):
+    """
+    Ajoute de nouveaux paramètres dans Firestore.
+    """
+    return add_parameters(request.params)
