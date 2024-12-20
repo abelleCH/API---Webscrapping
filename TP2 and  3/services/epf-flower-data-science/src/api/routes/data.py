@@ -7,7 +7,6 @@ import joblib
 import os
 import pandas as pd
 import src.services.load as load
-import src.services.cleaning as cleaning
 import src.services.PST as PST
 from fastapi import HTTPException, APIRouter
 from src.services.PST import *
@@ -222,7 +221,7 @@ def process_dataset():
     try: 
 
         dataset = load.load_dataset_from_url(IRIS_DATASET_URL)
-        data = cleaning.process_dataset(dataset)
+        data = PST.process_dataset(dataset)
         X_train, y_train = PST.split_dataset(data)
         PST.train_model(X_train,y_train)
         return "PST done"

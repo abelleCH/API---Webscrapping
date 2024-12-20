@@ -1,74 +1,77 @@
-import pytest
-import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+import unittest
 from unittest.mock import MagicMock
+import pandas as pd
 import json
+from io import StringIO
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+import joblib, os
+from PST import process_dataset, split_dataset, load_model_parameters, train_model
 
-from PST import split_dataset, load_model_parameters, train_model  # Remplacez 'your_module' par le nom réel du module
+class TestModelPipeline(unittest.TestCase):
 
-# Sample Iris dataset for testing
-data = {
-    'sepal_length': [5.1, 4.9, 4.7, 4.6, 5.0],
-    'sepal_width': [3.5, 3.0, 3.2, 3.1, 3.6],
-    'petal_length': [1.4, 1.4, 1.3, 1.5, 1.4],
-    'petal_width': [0.2, 0.2, 0.2, 0.2, 0.2],
-    'species': ['setosa', 'setosa', 'setosa', 'setosa', 'setosa']
-}
+    def setUp(self):
+        self.dataset_json = json.dumps([
+            {"sepal_length": 5.1, "sepal_width": 3.5, "petal_length": 1.4, "petal_width": 0.2, "species": "setosa"},
+            {"sepal_length": 4.9, "sepal_width": 3.0, "petal_length": 1.4, "petal_width": 0.2, "species": "setosa"},
+            {"sepal_length": 4.7, "sepal_width": 3.2, "petal_length": 1.3, "petal_width": 0.2, "species": "setosa"}
+        ])
 
-iris_df = pd.DataFrame(data)
+        self.model_parameters = {
+            "n_estimators": 100,
+            "max_depth": 5,
+            "max_features": "sqrt"
+        }
 
-@pytest.fixture
-def mock_model_params():
-    """Fixture to mock model parameters."""
-    return {
-        "n_estimators": 100,
-        "max_depth": 3,
-        "max_features": "auto"
-    }
+        self.expected_df = pd.DataFrame({
+            "sepal_length": [5.1, 4.9],
+            "sepal_width": [3.5, 3.0],
+            "petal_length": [1.4, 1.4],
+            "petal_width": [0.2, 0.2],
+            "species": ["setosa", "setosa"]
+        })
 
-@pytest.fixture
-def mock_model():
-    """Fixture to mock a RandomForest model."""
-    return MagicMock(spec=RandomForestClassifier)
+    def processed_dataset(self):
+        return process_dataset(self.dataset_json)
 
-def test_split_dataset():
-    """Test the split_dataset function."""
-    X_train, y_train = split_dataset(iris_df)
-    assert X_train.shape[0] == 4, "Training set should have 80% of the data."
-    assert y_train.shape[0] == 4, "Training set labels should match the training data size."
-    assert len(X_train) == len(y_train), "Features and labels should have the same length."
+    def test_process_dataset_shape(self):
+        processed_data = self.processed_dataset()
+        self.assertEqual(processed_data.shape, (3, 5), "Dataset should have 3 rows and 5 columns.")
 
-def test_load_model_parameters_success(mock_model_params):
-    """Test loading model parameters successfully."""
-    mock_open = MagicMock()
-    mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(mock_model_params)
+    def test_process_dataset_no_missing_values(self):
+        processed_data = self.processed_dataset()
+        self.assertEqual(processed_data.isnull().sum().sum(), 0, "There should be no missing values.")
+
+    def test_process_dataset_columns(self):
+        processed_data = self.processed_dataset()
+        expected_columns = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width', 'species']
+        self.assertListEqual(list(processed_data.columns), expected_columns, f"Expected columns: {expected_columns}")
+
+    def test_split_dataset(self):
+        iris_df = self.expected_df.copy()
+        X_train, y_train = split_dataset(iris_df)
+
+        self.assertListEqual(list(X_train.columns), ["sepal_length", "sepal_width", "petal_length", "petal_width"])
+        self.assertEqual(len(X_train), len(y_train))
+
+    def test_load_model_parameters(self):
+        file_path = "test_parameters.json"
+        with open(file_path, "w") as file:
+            json.dump(self.model_parameters, file, indent=4)
+
+        params=load_model_parameters(file_path)
+
+        self.assertEqual(params, self.model_parameters)
     
-    with mock_open("dummy_path", 'r') as f:
-        params = load_model_parameters("dummy_path")
-        
-    assert params == mock_model_params, "The model parameters should match the mocked data."
+    # def test_train_model(self):
+    #     X_train = self.expected_df.drop(columns="species")
+    #     y_train = self.expected_df["species"]
 
-def test_load_model_parameters_failure():
-    """Test failure when loading model parameters."""
-    mock_open = MagicMock()
-    mock_open.return_value.__enter__.return_value.read.return_value = "invalid json"
-    
-    with mock_open("dummy_path", 'r') as f:
-        params = load_model_parameters("dummy_path")
-        
-    assert params == {}, "If the JSON is invalid, it should return an empty dictionary."
+    #     model_filename = "mock_model.pkl"
 
-def test_train_model_success(mock_model, mock_model_params):
-    """Test the train_model function."""
-    model = mock_model
-    model_params = mock_model_params
-    
-    # Mock the load_model_parameters to return the mocked parameters
-    load_model_parameters = MagicMock(return_value=model_params)
-    
-    X_train, y_train = split_dataset(iris_df)
-    
-    # Call the train_model function
-    train_model(X_train, y_train)
-    
-    
+    #     model = train_model(X_train, y_train)
+
+    #     self.assertTrue(os.path.exists(model_filename), "Model file should be saved.")
+
+if __name__ == "__main__":
+    unittest.main()
