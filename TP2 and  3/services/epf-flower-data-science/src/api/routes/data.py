@@ -262,5 +262,11 @@ def make_prediction(request: PredictionRequest):
             detail=f"An error occurred during prediction: {str(e)}"
         )
 
+@router.get("/get-parameters-collection")
+def get_parameters_collection():
+    """
+    Create a Firestore collection for model parameters.
+    """
+    return get_parameters()
 
 
