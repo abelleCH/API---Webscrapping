@@ -1,7 +1,7 @@
 {
     "Iris Species": {
         "name": "Iris Species",
-        "url": "https://www.kaggle.com/datasets/uciml/iris"
+        "url": "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
     },
     "1": {
         "name": "string",
@@ -14,5 +14,9 @@
     "Air France Reviews Dataset": {
         "name": "Air France Reviews Dataset",
         "url": "https://www.kaggle.com/datasets/saharnazyaghoobpoor/air-france-reviews-dataset"
+    },
+    "test": {
+        "name": "test",
+        "url": "testest"
     }
 }
