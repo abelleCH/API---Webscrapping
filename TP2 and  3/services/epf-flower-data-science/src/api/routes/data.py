@@ -29,6 +29,10 @@ class Dataset(BaseModel):
     name: str
     url: str
 
+class ParametersRequest(BaseModel):
+    params: dict
+
+
 # Charger le fichier de configuration
 def load_config():
     """
@@ -262,11 +266,23 @@ def make_prediction(request: PredictionRequest):
             detail=f"An error occurred during prediction: {str(e)}"
         )
 
-@router.get("/get-parameters-collection")
+@router.get("/collection", name="See firestore collection parameters")
 def get_parameters_collection():
     """
     Create a Firestore collection for model parameters.
     """
     return get_parameters()
 
+@router.put("/updateC", name="Update parameters in Firestore")
+def update_parameters_endpoint(request: ParametersRequest):
+    """
+    Met à jour les paramètres dans Firestore avec les paramètres envoyés dans la requête.
+    """
+    return update_parameters(request.params)
 
+@router.post("/addC", name="Add new parameters to Firestore")
+def add_parameters_endpoint(request: ParametersRequest):
+    """
+    Ajoute de nouveaux paramètres dans Firestore.
+    """
+    return add_parameters(request.params)
