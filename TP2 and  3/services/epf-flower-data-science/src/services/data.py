@@ -1,12 +1,14 @@
 from sklearn.model_selection import train_test_split
+from fastapi import HTTPException
 import joblib
 import os
 import json
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.datasets import load_iris
+from google.cloud import firestore
 
 # Chemins vers les fichiers
+
 MODEL_SAVE_PATH = "src/models/random_forest_model.pkl"
 PARAMETERS_FILE_PATH = "src/config/model_parameters.json"
 
@@ -19,7 +21,7 @@ def split_dataset(iris_df):
     # Séparer les données en features (X) et target (y)
     X = iris_df[numeric_columns]
     print(X.shape)
-    y = iris_df['species']
+    y = iris_df['species'].astype('category')
     print(y.shape)
 
     # Diviser le dataset en ensembles d'entraînement et de test

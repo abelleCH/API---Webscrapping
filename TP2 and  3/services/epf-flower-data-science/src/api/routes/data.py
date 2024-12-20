@@ -9,6 +9,14 @@ import pandas as pd
 import src.services.load as load
 import src.services.cleaning as cleaning
 import src.services.data as PST
+from fastapi import HTTPException, APIRouter
+from src.services.data import *
+from src.services.firestore import *
+from pydantic import BaseModel
+from typing import Dict, Any
+
+# Crée une instance du client Firestore
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "src/config/abelleapi-firebase.json"
 
 router = APIRouter()
 
@@ -229,17 +237,6 @@ def process_dataset():
 class PredictionRequest(BaseModel):
     features: list  # List of feature values (depending on your dataset's features)
 
-# Load the trained model (assuming it's a scikit-learn model)
-def load_trained_model():
-    try:
-        model = joblib.load(MODEL_PATH)  # Load the model from the specified path
-        return model
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred while loading the trained model: {str(e)}"
-        )
-
 # Endpoint to make predictions
 @router.post("/predict", name="Predict with Trained Model")
 def make_prediction(request: PredictionRequest):
@@ -248,7 +245,7 @@ def make_prediction(request: PredictionRequest):
     - `features`: List of feature values for prediction.
     """
     try:
-        model = load_trained_model()
+        model = joblib.load(MODEL_PATH)
 
         input_data = pd.DataFrame([request.features])  # Convert the list of features into a DataFrame
 
@@ -264,4 +261,6 @@ def make_prediction(request: PredictionRequest):
             status_code=500,
             detail=f"An error occurred during prediction: {str(e)}"
         )
+
+
 
