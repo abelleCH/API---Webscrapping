@@ -26,38 +26,44 @@ def get_parameters():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving parameters: {e}")
 
-
 def update_parameters(new_params: dict):
     """
-    Updates the parameters in Firestore with new values.
-    
-    This function checks if the parameters already exist. If they do, the existing parameters 
-    are updated with the new ones. If they don't exist, the new parameters are added to Firestore.
-    
+    Updates existing parameters in Firestore. If a parameter does not exist, 
+    a message is returned advising to use 'add_parameters' to add it.
+
     Args:
-        new_params (dict): A dictionary containing the new parameters to be updated.
-        
+        new_params (dict): Dictionary of parameters to be updated.
+
     Returns:
-        dict: A success message and the updated parameters.
-        
+        dict: Success message and response with updated parameters or messages for missing parameters.
+
     Raises:
-        HTTPException: If there is an error updating the parameters in Firestore.
+        HTTPException: If an error occurs while updating the parameters in Firestore.
     """
     try:
         db = firestore.Client()
         doc_ref = db.collection("parameters").document("parameters")
         
         doc = doc_ref.get()
+        
         if doc.exists:
-            current_params = doc.to_dict().get("params", {})
+            current_params = doc.to_dict()
+            
+            response = {}
+            for key, value in new_params.items():
+                if key in current_params:
+                    current_params[key] = value
+                    #response[key] = f"Parameter '{key}' updated successfully."
+                else:
+                    response[key] = f"Parameter '{key}' does not exist. Please use the 'add_parameters' function to add it."
+
+            doc_ref.set(current_params, merge=True)
+            return {"message": "Parameters updated successfully.", "response": response}
         else:
-            current_params = {}
+            return {
+                "message": "No existing parameters found. Please use the 'add_parameters' function to add new parameters."
+            }
 
-        current_params.update(new_params)
-
-        doc_ref.set({"params": current_params}, merge=True)
-
-        return {"message": "Parameters updated successfully.", "params": current_params}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating parameters: {e}")
 

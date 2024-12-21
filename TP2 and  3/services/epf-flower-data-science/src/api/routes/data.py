@@ -12,9 +12,7 @@ from fastapi import HTTPException, APIRouter
 from src.services.PST import *
 from src.services.firestore import *
 from pydantic import BaseModel
-from typing import Dict, Any
 
-# Crée une instance du client Firestore
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "src/config/abelleapi-firebase.json"
 
 router = APIRouter()
@@ -28,7 +26,6 @@ class Dataset(BaseModel):
     name: str
     url: str
 
-# Charger le fichier de configuration
 def load_config():
     """
     Charge le fichier JSON de configuration.
@@ -39,7 +36,6 @@ def load_config():
     with open(CONFIG_FILE_PATH, "r") as file:
         return json.load(file)
     
-# Sauvegarder le fichier de configuration
 def save_config(config):
     """
     Sauvegarde le fichier JSON de configuration.
@@ -262,4 +258,26 @@ def make_prediction(request: PredictionRequest):
         )
 
 
+class ParametersRequest(BaseModel):
+    params: dict
 
+@router.get("/SeeCollection", name="See firestore collection parameters")
+def get_parameters_collection():
+    """
+    Récupère les paramètres stockés dans Firestore.
+    """
+    return get_parameters()
+
+@router.put("/UpdateCollection", name="Update parameters in Firestore")
+def update_parameters_endpoint(request: ParametersRequest):
+    """
+    Met à jour les paramètres dans Firestore avec les paramètres envoyés dans la requête.
+    """
+    return update_parameters(request.params)
+
+@router.post("/AddCollection", name="Add new parameters to Firestore")
+def add_parameters_endpoint(request: ParametersRequest):
+    """
+    Ajoute de nouveaux paramètres dans Firestore.
+    """
+    return add_parameters(request.params)
