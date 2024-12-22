@@ -5,20 +5,23 @@ from fastapi import Query
 from typing import Optional
 import json, os, joblib
 import pandas as pd
-import src.services.load as load
+from src.services.load import *
+from src.services.loading_config import *
 import src.services.PST as PST
 from src.services.PST import *
 from src.services.firestore import *
-from src.services.loading_config import *
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "src/config/abelleapi-firebase.json"
+os.environ['KAGGLE_CONFIG_DIR'] = "src/config/kaggle.json"
 
 router = APIRouter()
 
-IRIS_DATASET_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+IRIS_DATASET_URL = "https://www.kaggle.com/datasets/uciml/iris"
 MODEL_PATH = "src/models/random_forest_model.pkl"
 CONFIG_FILE_PATH = "src/config/config.json"
 MODEL_PARAMS_FILE_PATH = "src/config/model_parameters.json"
+KAGGLE_CONFIG_PATH = "src/config/kaggle.json"
+DATA_DIR = "src/data"
 
 class Dataset(BaseModel):
     name: str
@@ -182,11 +185,9 @@ def update_dataset(name: str, new_url: str):
             detail=f"Une erreur est survenue : {str(e)}"
         )
 
-
 @router.get("/Load", name="Load Dataset")
 def load_dataset(url: Optional[str] = Query(None, description="URL of the dataset to load"),
                           dataset_name: Optional[str] = Query(None, description="Name of the dataset to load")):
-    
     """
     Loads a dataset either by its URL or by its name from the configuration file.
     
@@ -210,16 +211,18 @@ def load_dataset(url: Optional[str] = Query(None, description="URL of the datase
             - The dataset in JSON format.
     """
     try:
+        # Charge la configuration
         config = load_config(CONFIG_FILE_PATH)
 
+        # Vérifie si un dataset_name est fourni, et récupère l'URL correspondante dans la config
         if dataset_name:
             dataset_info = config.get(dataset_name)
-            if dataset_info:
+            if dataset_info and "url" in dataset_info:
                 url = dataset_info["url"]
             else:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Dataset '{dataset_name}' not found in configuration."
+                    detail=f"Dataset '{dataset_name}' not found in configuration or URL missing."
                 )
 
         if not url:
@@ -228,18 +231,18 @@ def load_dataset(url: Optional[str] = Query(None, description="URL of the datase
                 detail="Either 'url' or 'dataset_name' must be provided."
             )
 
-        dataset_df = pd.read_csv(url, header=None)
+        dataset_json = download_kaggle_dataset(url)
 
-        dataset_json = dataset_df.to_json(orient="records")
+        return {"message": "Dataset loaded successfully.", "data": dataset_json}
 
-        return {"message": "Dataset loaded successfully.", "data": json.loads(dataset_json)}
-
+    except HTTPException as e:
+        raise e  
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred while loading the dataset from the URL: {str(e)}"
+            detail=f"An error occurred while loading the dataset: {str(e)}"
         )
-
+    
 
 @router.post("/PST", name="Process, split and train dataset")
 def process_dataset():
@@ -254,9 +257,10 @@ def process_dataset():
         str: A message confirming the completion of the processing, splitting, and training tasks.
     """
     try: 
-
-        dataset = load.load_dataset_from_url(IRIS_DATASET_URL)
-        data = PST.process_dataset(dataset)
+        dataset_df = pd.read_csv("src/data/iris/Iris.csv", header=None, index_col=0)
+        print(dataset_df.head())
+        dataset_json = dataset_df.to_json(orient="records")
+        data = PST.process_dataset(dataset_json)
         X_train, y_train = PST.split_dataset(data)
         PST.train_model(X_train,y_train)
         return "PST done"
@@ -285,7 +289,9 @@ def make_prediction(request: PredictionRequest):
     try:
         model = joblib.load(MODEL_PATH)
 
-        input_data = pd.DataFrame([request.features]) 
+        column_names = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
+
+        input_data = pd.DataFrame([request.features], columns=column_names)
 
         prediction = model.predict(input_data)
         print(prediction)

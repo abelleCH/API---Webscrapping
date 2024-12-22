@@ -1,23 +1,58 @@
-import pandas as pd 
-def load_dataset_from_url(url):
+import pandas as pd
+import os
+from pathlib import Path
+from kaggle.api.kaggle_api_extended import KaggleApi
+from fastapi import HTTPException
+
+DATA_DIR = 'src/data/'  
+CONFIG_FILE_PATH = 'src/config/config.json'  
+
+def download_kaggle_dataset(url: str):
     """
-    Loads a dataset from the provided URL and returns it as a JSON.
+    Downloads a Kaggle dataset from the specified URL, extracts the files, 
+    and returns the data as a JSON object.
 
     Args:
-        url (str): The URL pointing to the dataset (CSV file).
+    - url (str): The URL of the Kaggle dataset to download.
 
     Returns:
-        dict: The dataset as a JSON object in 'records' orientation.
+    - json_data (list): A list of records (dict) representing the dataset.
 
     Raises:
-        ValueError: If the dataset at the URL is not in the expected format or cannot be read.
+    - HTTPException: If any error occurs during the download or data processing.
     """
-
     try:
-        dataset_df = pd.read_csv(url, header=None)
+        os.environ['KAGGLE_CONFIG_DIR'] = 'src/config/kaggle.json'  
+        api = KaggleApi()
+        api.authenticate()
 
-        dataset_json = dataset_df.to_json(orient="records")
+        dataset_spec = url.split('/')[-2] + '/' + url.split('/')[-1]
 
-        return dataset_json
+        dataset_name = url.split('/')[-1]
+        destination = Path(DATA_DIR) / dataset_name  
+        destination.mkdir(parents=True, exist_ok=True) 
+
+        print(f"Downloading dataset {dataset_spec} to {destination}...")
+        api.dataset_download_files(dataset_spec, path=str(destination), unzip=True)
+
+        print(f"Dataset downloaded to: {destination}")
+        csv_file = next((file for file in destination.glob("*.csv")), None)
+        
+        if csv_file is None:
+            raise HTTPException(status_code=404, detail="No CSV file found in the downloaded dataset.")
+
+        df = pd.read_csv(csv_file)
+        if df.empty:
+            raise HTTPException(status_code=404, detail="The CSV file is empty.")
+
+        json_data = df.to_dict(orient="records")
+
+        return json_data
+
+    except HTTPException as e:
+        raise e  
     except Exception as e:
-            raise ValueError(f"Error loading dataset from URL: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while downloading the dataset: {str(e)}"
+        )
