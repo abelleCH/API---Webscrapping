@@ -1,9 +1,9 @@
 """API Router for Fast API."""
 from fastapi import APIRouter
 
-from src.api.routes import hello,data
+from src.api.routes import hello, functions
 
 router = APIRouter()
 
 router.include_router(hello.router, tags=["Hello"])
-router.include_router(data.router)
+router.include_router(functions.router)

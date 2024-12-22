@@ -1,32 +1,34 @@
-from fastapi import HTTPException, APIRouter
 import os, json
 
-CONFIG_FILE_PATH = "src/config/config.json"
-MODEL_PARAMS_FILE_PATH = "src/config/model_parameters.json"
+def load_config(config_file_path):
+    """
+    Loads a JSON configuration file.
 
-def load_config():
+    Args:
+        config_file_path (str): The path to the configuration file.
+
+    Returns:
+        dict: The configuration data as a dictionary.
+
+    Raises:
+        FileNotFoundError: If the configuration file does not exist.
     """
-    Charge le fichier JSON de configuration.
-    """
-    if not os.path.exists(CONFIG_FILE_PATH):
+    if not os.path.exists(config_file_path):
         raise FileNotFoundError("The configuration file does not exist.")
     
-    with open(CONFIG_FILE_PATH, "r") as file:
+    with open(config_file_path, "r") as file:
         return json.load(file)
     
-def save_config(config):
+def save_config(config, config_file_path):
     """
-    Sauvegarde le fichier JSON de configuration.
-    """
-    with open(CONFIG_FILE_PATH, "w") as file:
-        json.dump(config, file, indent=4)    
+    Saves a configuration dictionary to a JSON file.
 
-def load_model_parameters():
-    try:
-        with open(MODEL_PARAMS_FILE_PATH, "r") as file:
-            return json.load(file)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred while loading model parameters: {str(e)}"
-        )
+    Args:
+        config (dict): The configuration data to save.
+        config_file_path (str): The path to the configuration file.
+
+    Returns:
+        None
+    """
+    with open(config_file_path, "w") as file:
+        json.dump(config, file, indent=4)

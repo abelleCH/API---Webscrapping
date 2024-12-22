@@ -3,16 +3,13 @@ from src.schemas.message import MessageResponse
 from pydantic import BaseModel
 from fastapi import Query
 from typing import Optional
-import json
-import joblib
-import os
+import json, os, joblib
 import pandas as pd
 import src.services.load as load
 import src.services.PST as PST
 from src.services.PST import *
 from src.services.firestore import *
 from src.services.loading_config import *
-from pydantic import BaseModel
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "src/config/abelleapi-firebase.json"
 
@@ -20,6 +17,8 @@ router = APIRouter()
 
 IRIS_DATASET_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
 MODEL_PATH = "src/models/random_forest_model.pkl"
+CONFIG_FILE_PATH = "src/config/config.json"
+MODEL_PARAMS_FILE_PATH = "src/config/model_parameters.json"
 
 class Dataset(BaseModel):
     name: str
@@ -41,7 +40,7 @@ def list_datasets():
         dict: A list of datasets with their names and URLs if found, or a message indicating no datasets are found.
     """
     try:
-        config = load_config()
+        config = load_config(CONFIG_FILE_PATH)
 
         if not config:
             return {"message": "Aucun dataset trouvé dans le fichier de configuration."}
@@ -77,7 +76,7 @@ def get_dataset(dataset_name: str) -> MessageResponse:
         MessageResponse: A message indicating the dataset's information or an error if not found.
     """
     try:
-        config = load_config()
+        config = load_config(CONFIG_FILE_PATH)
         
         if dataset_name not in config:
             raise HTTPException(
@@ -113,7 +112,7 @@ def add_dataset(name: str, url: str):
         dict: A message indicating whether the dataset was added successfully or already exists.
     """
     try:
-        config = load_config()
+        config = load_config(CONFIG_FILE_PATH)
 
         if name in config:
             raise HTTPException(
@@ -126,7 +125,7 @@ def add_dataset(name: str, url: str):
             "url": url
         }
 
-        save_config(config)
+        save_config(config, CONFIG_FILE_PATH)
 
         return {"message": f"Le dataset '{name}' a été ajouté avec succès."}
 
@@ -158,7 +157,7 @@ def update_dataset(name: str, new_url: str):
         dict: A message indicating whether the dataset was updated successfully or not found.
     """
     try:
-        config = load_config()
+        config = load_config(CONFIG_FILE_PATH)
 
         if name not in config:
             raise HTTPException(
@@ -168,7 +167,7 @@ def update_dataset(name: str, new_url: str):
 
         config[name]["url"] = new_url
 
-        save_config(config)
+        save_config(config, CONFIG_FILE_PATH)
 
         return {"message": f"Le dataset '{name}' a été mis à jour avec succès."}
 
@@ -211,7 +210,7 @@ def load_dataset(url: Optional[str] = Query(None, description="URL of the datase
             - The dataset in JSON format.
     """
     try:
-        config = load_config()
+        config = load_config(CONFIG_FILE_PATH)
 
         if dataset_name:
             dataset_info = config.get(dataset_name)
