@@ -12,7 +12,8 @@ from src.services.PST import *
 from src.services.firestore import *
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "src/config/abelleapi-firebase.json"
-os.environ['KAGGLE_CONFIG_DIR'] = "src/config/kaggle.json"
+os.environ["KAGGLE_CONFIG_DIR"] = "src/config/kaggle.json"
+
 
 router = APIRouter()
 
@@ -211,10 +212,8 @@ def load_dataset(url: Optional[str] = Query(None, description="URL of the datase
             - The dataset in JSON format.
     """
     try:
-        # Charge la configuration
         config = load_config(CONFIG_FILE_PATH)
 
-        # Vérifie si un dataset_name est fourni, et récupère l'URL correspondante dans la config
         if dataset_name:
             dataset_info = config.get(dataset_name)
             if dataset_info and "url" in dataset_info:
@@ -326,6 +325,8 @@ def update_parameters_endpoint(request: ParametersRequest):
     
     Returns:
         dict: A message confirming the successful update of the parameters.
+
+    Example : {"params": {"criterion":"gini"}}    
     """
     return update_parameters(request.params)
 
@@ -340,5 +341,7 @@ def add_parameters_endpoint(request: ParametersRequest):
     
     Returns:
         dict: A message confirming the successful addition of the parameters.
+
+    Example : {"params": {"n_samples":20}}        
     """
     return add_parameters(request.params)

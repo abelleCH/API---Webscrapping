@@ -10,5 +10,9 @@
     "iris": {
         "name": "iris",
         "url": "https://www.kaggle.com/datasets/uciml/iris"
+    },
+    "test": {
+        "name": "test",
+        "url": "testest"
     }
 }

@@ -1,8 +1,9 @@
 import pandas as pd
 import os
 from pathlib import Path
-from kaggle.api.kaggle_api_extended import KaggleApi
 from fastapi import HTTPException
+os.environ["KAGGLE_CONFIG_DIR"] = "src/config"
+from kaggle.api.kaggle_api_extended import KaggleApi
 
 DATA_DIR = 'src/data/'  
 CONFIG_FILE_PATH = 'src/config/config.json'  
