@@ -58,7 +58,7 @@ def update_parameters(new_params: dict):
                     response[key] = f"Parameter '{key}' does not exist. Please use the 'add_parameters' function to add it."
 
             doc_ref.set(current_params, merge=True)
-            return {"message": "Parameters updated successfully.", "response": response}
+            return {"message": "Parameters updated successfully.", "response": current_params}
         else:
             return {
                 "message": "No existing parameters found. Please use the 'add_parameters' function to add new parameters."

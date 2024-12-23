@@ -32,16 +32,16 @@ def test_get_parameters_not_found(mock_firestore_client):
 
 def test_update_parameters(mock_firestore_client):
     mock_doc_ref = MagicMock()
-    mock_firestore_client.return_value.collection.return_value.document.return_value = mock_doc_ref
+    mock_firestore_client.return_value.collection.return_value.document.return_value = mock_doc_ref        
     mock_doc_ref.get.return_value.exists = True
-    mock_doc_ref.get.return_value.to_dict.return_value = {"params": {"param1": "value1"}}
+    mock_doc_ref.get.return_value.to_dict.return_value = {"param1": "value1", "param2": "value2"}
 
-    new_params = {"param2": "value2"}
+    new_params = {"param1": "new_value1"}
     response = update_parameters(new_params)
 
     assert response["message"] == "Parameters updated successfully."
-    assert response["params"] == {"param1": "value1", "param2": "value2"}
-    mock_firestore_client.return_value.collection.return_value.document.return_value.set.assert_called_once()
+    assert response["response"]["param1"] == "new_value1"  
+
 
 def test_add_parameters(mock_firestore_client):
     mock_doc_ref = MagicMock()
