@@ -197,7 +197,7 @@ def load_dataset(url: Optional[str] = Query(None, description="URL of the datase
     in JSON format.
 
     Args:
-        url (str, optional): The URL where the dataset is located. If not provided, the `dataset_name` must be specified.
+        url (str, optional): The `url` where the dataset is located. If not provided, the `dataset_name` must be specified.
         dataset_name (str, optional): The name of the dataset to load. The URL will be fetched from the configuration file.
 
     Raises:
