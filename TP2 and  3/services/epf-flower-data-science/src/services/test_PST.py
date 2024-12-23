@@ -1,11 +1,6 @@
 import unittest
-from unittest.mock import MagicMock
 import pandas as pd
 import json
-from io import StringIO
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-import joblib, os
 from PST import process_dataset, split_dataset, load_model_parameters, train_model
 
 class TestModelPipeline(unittest.TestCase):
